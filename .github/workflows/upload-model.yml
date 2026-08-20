@@ -1,0 +1,24 @@
+name: Upload BiRefNet Model to Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download model from HuggingFace
+        run: |
+          curl -L -o birefnet-lite-fp16.onnx \
+            "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/main/onnx/model_fp16.onnx"
+      - name: Verify SHA256
+        run: |
+          echo "d39b897ceb16ae654c1731f3dba0cf9b368d9cae74b5a57459b455cc8bfec402  birefnet-lite-fp16.onnx" | sha256sum -c
+      - name: Create Release and Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: models-v1
+          name: BiRefNet Model Assets v1
+          files: birefnet-lite-fp16.onnx
