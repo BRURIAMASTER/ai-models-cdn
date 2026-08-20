@@ -12,7 +12,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.11'h
 
       - name: Install dependencies
         run: |
@@ -71,7 +71,7 @@ jobs:
           import os
 
           model = onnx.load("birefnet-lite-512-dynamic.onnx")
-          fp16  = float16.convert_float_to_float16(model, keep_io_types=False)
+          fp16  = float16.convert_float_to_float16(model, keep_io_types=True, op_block_list=['Cast'])
           onnx.save(fp16, "birefnet-lite-512-fp16.onnx")
 
           size = os.path.getsize("birefnet-lite-512-fp16.onnx")
