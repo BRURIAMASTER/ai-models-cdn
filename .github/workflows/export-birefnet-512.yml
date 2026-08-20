@@ -1,0 +1,90 @@
+name: Export BiRefNet-lite 512px Dynamic
+
+on:
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install transformers huggingface_hub onnx onnxconverter-common
+
+      - name: Export model to ONNX with dynamic axes
+        run: |
+          python3 << 'PYEOF'
+          import torch
+          from transformers import AutoModelForImageSegmentation
+
+          print("Loading ZhengPeng7/BiRefNet_lite ...")
+          model = AutoModelForImageSegmentation.from_pretrained(
+              "ZhengPeng7/BiRefNet_lite",
+              trust_remote_code=True
+          )
+          model.eval()
+
+          class Wrapper(torch.nn.Module):
+              def __init__(self, m):
+                  super().__init__()
+                  self.m = m
+              def forward(self, x):
+                  out = self.m(x)
+                  return out[-1] if isinstance(out, (list, tuple)) else out
+
+          wrapped = Wrapper(model)
+          wrapped.eval()
+
+          dummy = torch.zeros(1, 3, 512, 512)
+
+          print("Exporting ONNX with dynamic spatial axes ...")
+          with torch.no_grad():
+              torch.onnx.export(
+                  wrapped,
+                  dummy,
+                  "birefnet-lite-512-dynamic.onnx",
+                  opset_version=17,
+                  input_names=["input_image"],
+                  output_names=["output"],
+                  dynamic_axes={
+                      "input_image": {0: "batch", 2: "height", 3: "width"},
+                      "output":      {0: "batch", 2: "height", 3: "width"},
+                  },
+              )
+          print("FP32 export done.")
+          PYEOF
+
+      - name: Convert to fp16
+        run: |
+          python3 << 'PYEOF'
+          import onnx
+          from onnxconverter_common import float16
+          import os
+
+          model = onnx.load("birefnet-lite-512-dynamic.onnx")
+          fp16  = float16.convert_float_to_float16(model, keep_io_types=False)
+          onnx.save(fp16, "birefnet-lite-512-fp16.onnx")
+
+          size = os.path.getsize("birefnet-lite-512-fp16.onnx")
+          print(f"fp16 size: {size/1024/1024:.1f} MB")
+          PYEOF
+
+      - name: Verify and print SHA256
+        run: |
+          sha256sum birefnet-lite-512-fp16.onnx
+          ls -lh birefnet-lite-512-fp16.onnx
+
+      - name: Upload to Release models-v2
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: models-v2
+          name: "BiRefNet-lite 512px dynamic fp16"
+          files: birefnet-lite-512-fp16.onnx
