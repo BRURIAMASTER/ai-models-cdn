@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install transformers huggingface_hub onnx onnxconverter-common
+          pip install transformers huggingface_hub onnx
           pip install einops kornia timm onnxscript
 
       - name: Export model to ONNX with dynamic axes
@@ -51,7 +51,7 @@ jobs:
               torch.onnx.export(
                   wrapped,
                   dummy,
-                  "birefnet-lite-512-dynamic.onnx",
+                  "birefnet-lite-512.onnx",
                   opset_version=17,
                   input_names=["input_image"],
                   output_names=["output"],
@@ -63,29 +63,14 @@ jobs:
           print("FP32 export done.")
           PYEOF
 
-      - name: Convert to fp16
-        run: |
-          python3 << 'PYEOF'
-          import onnx
-          from onnxconverter_common import float16
-          import os
-
-          model = onnx.load("birefnet-lite-512-dynamic.onnx")
-          fp16  = float16.convert_float_to_float16(model, keep_io_types=True, op_block_list=['Cast'])
-          onnx.save(fp16, "birefnet-lite-512-fp16.onnx")
-
-          size = os.path.getsize("birefnet-lite-512-fp16.onnx")
-          print(f"fp16 size: {size/1024/1024:.1f} MB")
-          PYEOF
-
       - name: Verify and print SHA256
         run: |
-          sha256sum birefnet-lite-512-fp16.onnx
-          ls -lh birefnet-lite-512-fp16.onnx
+          sha256sum birefnet-lite-512.onnx
+          ls -lh birefnet-lite-512.onnx
 
       - name: Upload to Release models-v2
         uses: softprops/action-gh-release@v2
         with:
           tag_name: models-v2
-          name: "BiRefNet-lite 512px dynamic fp16"
-          files: birefnet-lite-512-fp16.onnx
+          name: "BiRefNet-lite 512px dynamic fp32"
+          files: birefnet-lite-512.onnx
