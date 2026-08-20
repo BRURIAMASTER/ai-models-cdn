@@ -18,6 +18,7 @@ jobs:
         run: |
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install transformers huggingface_hub onnx onnxconverter-common
+          pip install einops kornia timm
 
       - name: Export model to ONNX with dynamic axes
         run: |
