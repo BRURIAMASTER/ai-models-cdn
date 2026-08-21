@@ -60,6 +60,11 @@ jobs:
                       "output":      {0: "batch", 2: "height", 3: "width"},
                   },
               )
+          import onnx as _onnx
+          print("Merging external data into single file ...")
+          _m = _onnx.load("birefnet-lite-512.onnx")
+          _onnx.save_model(_m, "birefnet-lite-512.onnx", save_as_external_data=False)
+          print("Merge complete.")
           print("FP32 export done.")
           PYEOF
 
