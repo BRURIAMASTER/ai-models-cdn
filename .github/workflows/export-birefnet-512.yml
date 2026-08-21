@@ -52,7 +52,7 @@ jobs:
                   wrapped,
                   dummy,
                   "birefnet-lite-512.onnx",
-                  opset_version=17,
+                  opset_version=19,
                   input_names=["input_image"],
                   output_names=["output"],
                   dynamic_axes={
